@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --primary: #064e3b;
+  --primary-light: #059669;
+  --accent: #10b981;
+  --background: #f0fdf4;
+  --white: #ffffff;
+  --glass: rgba(255, 255, 255, 0.8);
+}
+
+body {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  background-color: var(--background);
+  color: var(--primary);
+}
+
+@layer components {
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-md border-b border-[#064e3b]/10 sticky top-0 z-50 w-full;
+  }
+
+  .btn-primary {
+    @apply bg-[#064e3b] text-white px-6 py-3 rounded-full font-bold inline-flex items-center gap-2 transition-all hover:bg-[#059669] hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .premium-container {
+    @apply max-w-7xl mx-auto px-6 md:px-12;
+  }
+}
+
+/* Custom animations */
+.animate-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce 3s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-5%);
+    animation-timing-function: cubic-bezier(0.8, 0, 0, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.blob {
+  @apply absolute w-[500px] h-[500px] bg-accent/20 rounded-full blur-[100px] -z-10;
+}

@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: santamarta_db
+    restart: always
+    environment:
+      POSTGRES_USER: santa_user
+      POSTGRES_PASSWORD: santa_password
+      POSTGRES_DB: santamarta_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: santamarta_api
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/santamarta_db
+      SPRING_DATASOURCE_USERNAME: santa_user
+      SPRING_DATASOURCE_PASSWORD: santa_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: santamarta_ui
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
