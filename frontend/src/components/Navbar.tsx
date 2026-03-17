@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, User, MapPin, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, User, MapPin, Menu, X, LogOut, ShieldCheck } from 'lucide-react';
+import { authService, AuthResponse } from '../services/authService';
+import LoginModal from './LoginModal';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [user, setUser] = useState<AuthResponse | null>(null);
+
+  useEffect(() => {
+    setUser(authService.getCurrentUser());
+  }, []);
 
   const navLinks = [
     { label: 'Inicio', path: '/' },
     { label: 'Catálogo', path: '/catalogo' },
-    { label: 'Promociones', path: '/catalogo?promos=true' },
+    { label: 'Promociones', path: '/promociones' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    window.location.reload();
+  };
 
   return (
     <header className="glass-nav sticky top-0 z-50 py-4">
@@ -68,10 +82,31 @@ const Navbar: React.FC = () => {
             </span>
           </button>
 
-          <button className="btn-primary text-sm px-5 py-2.5">
-            <User size={16} />
-            <span className="hidden sm:inline">Acceder</span>
-          </button>
+          {user ? (
+            <div className="flex items-center gap-3 ml-2 pl-2 border-l border-[#064e3b]/10">
+              <div className="flex flex-col items-end hidden sm:flex">
+                <span className="text-[10px] font-black text-[#064e3b] leading-none flex items-center gap-1">
+                  {user.fullName} {user.role === 'ADMIN' && <ShieldCheck size={12} className="text-[#10b981]" />}
+                </span>
+                <span className="text-[8px] font-bold text-[#064e3b]/40 uppercase tracking-widest">{user.role}</span>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all border-none cursor-pointer"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsLoginOpen(true)}
+              className="btn-primary text-sm px-5 py-2.5 ml-2"
+            >
+              <User size={16} />
+              <span className="hidden sm:inline">Acceder</span>
+            </button>
+          )}
 
           {/* Mobile hamburger */}
           <button
@@ -100,6 +135,13 @@ const Navbar: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+        onLoginSuccess={() => setUser(authService.getCurrentUser())}
+      />
     </header>
   );
 };

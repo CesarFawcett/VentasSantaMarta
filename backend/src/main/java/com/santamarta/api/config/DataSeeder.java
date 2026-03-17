@@ -4,6 +4,9 @@ import com.santamarta.api.models.Category;
 import com.santamarta.api.models.Product;
 import com.santamarta.api.repositories.CategoryRepository;
 import com.santamarta.api.repositories.ProductRepository;
+import com.santamarta.api.repositories.UserRepository;
+import com.santamarta.api.models.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -18,11 +21,23 @@ public class DataSeeder implements CommandLineRunner {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
+        if (userRepository.count() == 0) {
+            log.info("Creando usuario administrador inicial...");
+            User admin = new User();
+            admin.setEmail("admin@santamarta.com");
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setFullName("Administrador Principal");
+            admin.setRole(User.Role.ADMIN);
+            userRepository.save(admin);
+        }
+
         if (productRepository.count() > 0) {
-            log.info("La base de datos ya tiene datos. Omitiendo seed.");
+            log.info("La base de datos ya tiene productos. Omitiendo seed de productos.");
             return;
         }
 

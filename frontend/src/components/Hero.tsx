@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight, Wind, ShoppingBag, ArrowRightCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Hero: React.FC = () => {
   return (
@@ -19,12 +20,12 @@ const Hero: React.FC = () => {
             Artesanías locales, delicias gastronómicas y productos exclusivos. Todo el encanto samario en un solo lugar.
           </p>
           <div className="flex flex-wrap gap-5">
-            <button className="btn-primary text-lg px-10 py-5 group shadow-lg shadow-[#10b981]/20">
+            <Link to="/catalogo" className="btn-primary text-lg px-10 py-5 group shadow-lg shadow-[#10b981]/20 no-underline decoration-transparent flex items-center gap-3">
               Explorar Catálogo <ArrowRightCircle className="group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="flex items-center gap-3 bg-white border-2 border-[#10b981]/10 text-[#064e3b] text-lg px-10 py-5 rounded-full font-bold hover:bg-[#10b981]/5 transition-all border-none cursor-pointer">
+            </Link>
+            <Link to="/promociones" className="flex items-center gap-3 bg-white border-2 border-[#10b981]/10 text-[#064e3b] text-lg px-10 py-5 rounded-full font-bold hover:bg-[#10b981]/5 transition-all text-center flex items-center justify-center no-underline decoration-transparent">
               Ver Promociones <ShoppingBag size={20} />
-            </button>
+            </Link>
           </div>
 
           <div className="pt-8 flex gap-10">
