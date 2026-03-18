@@ -1,8 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Wind, ShoppingBag, ArrowRightCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Slideshow from './Slideshow';
+
+interface PromoConfig {
+  banner1Urls: string[];
+  banner2Urls: string[];
+  topProductIds: string[];
+  timerEnd: string;
+}
 
 const Hero: React.FC = () => {
+  const [promoConfig, setPromoConfig] = useState<PromoConfig>({
+    banner1Urls: ["https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000"],
+    banner2Urls: ["https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000"],
+    topProductIds: [],
+    timerEnd: new Date(Date.now() + 86400000).toISOString()
+  });
+
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('promoConfig');
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        // Migration logic for old single-string banners
+        const config = {
+          ...parsed,
+          banner1Urls: Array.isArray(parsed.banner1Urls) ? parsed.banner1Urls : (parsed.banner1 ? [parsed.banner1] : []),
+          banner2Urls: Array.isArray(parsed.banner2Urls) ? parsed.banner2Urls : (parsed.banner2 ? [parsed.banner2] : [])
+        };
+        setPromoConfig(config);
+      } catch (e) {
+        console.error("Error loading promoConfig in Hero:", e);
+      }
+    }
+  }, []);
+
   return (
     <section className="relative overflow-hidden py-24 px-6 md:px-12 min-h-[85vh] flex items-center bg-[#f0fdf4]">
       {/* Background Decorative Blob */}
@@ -46,10 +79,12 @@ const Hero: React.FC = () => {
 
         <div className="relative fade-in hidden lg:block">
           <div className="relative rounded-[3rem] overflow-hidden shadow-2xl rotate-2 aspect-[4/5] max-w-lg mx-auto border-8 border-white group">
-            <img
-              src="https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000"
-              alt="Sierra Nevada de Santa Marta"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            <Slideshow 
+              imageUrls={promoConfig.banner1Urls.length > 0 
+                ? promoConfig.banner1Urls 
+                : ["https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000"]
+              } 
+              title="Sierra Nevada" 
             />
             <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-[#064e3b]/90 to-transparent text-white">
               <span className="bg-[#10b981] px-3 py-1 rounded text-[10px] font-black uppercase mb-3 inline-block">Destacado</span>

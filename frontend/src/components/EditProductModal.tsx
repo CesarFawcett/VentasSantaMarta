@@ -103,10 +103,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ isOpen, onClose, pr
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center px-6">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6">
       <div className="absolute inset-0 bg-[#064e3b]/60 backdrop-blur-md" onClick={onClose}></div>
       
-      <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 relative z-10 shadow-2xl animate-reveal max-h-[90vh] overflow-y-auto border border-[#064e3b]/5">
+      <div className="bg-white w-full max-w-2xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative z-10 shadow-2xl animate-reveal max-h-[95vh] md:max-h-[90vh] overflow-y-auto border border-[#064e3b]/5">
         <button onClick={onClose} className="absolute top-8 right-8 text-[#064e3b]/30 hover:text-[#064e3b] transition-colors bg-transparent border-none cursor-pointer">
           <X size={24} />
         </button>

@@ -3,8 +3,40 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import ProductGrid from '../components/ProductGrid';
 import Footer from '../components/Footer';
+import Slideshow from '../components/Slideshow';
+import { useState, useEffect } from 'react';
+
+interface PromoConfig {
+  banner1Urls: string[];
+  banner2Urls: string[];
+  topProductIds: string[];
+  timerEnd: string;
+}
 
 const HomePage: React.FC = () => {
+  const [promoConfig, setPromoConfig] = useState<PromoConfig>({
+    banner1Urls: ["https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000"],
+    banner2Urls: ["https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000"],
+    topProductIds: [],
+    timerEnd: new Date(Date.now() + 86400000).toISOString()
+  });
+
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('promoConfig');
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        const config = {
+          ...parsed,
+          banner1Urls: Array.isArray(parsed.banner1Urls) ? parsed.banner1Urls : (parsed.banner1 ? [parsed.banner1] : []),
+          banner2Urls: Array.isArray(parsed.banner2Urls) ? parsed.banner2Urls : (parsed.banner2 ? [parsed.banner2] : [])
+        };
+        setPromoConfig(config);
+      } catch (e) {
+        console.error("Error loading promoConfig in HomePage:", e);
+      }
+    }
+  }, []);
   return (
     <div className="min-h-screen bg-[#f0fdf4] overflow-x-hidden">
       {/* Decorative blobs */}
@@ -41,10 +73,12 @@ const HomePage: React.FC = () => {
         <section className="max-w-7xl mx-auto px-6 md:px-12 py-24 grid lg:grid-cols-2 gap-20 items-center">
           <div className="relative animate-reveal">
             <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl group">
-              <img
-                src="https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000"
-                alt="Artesanía Santa Marta"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              <Slideshow 
+                imageUrls={promoConfig.banner2Urls.length > 0 
+                  ? promoConfig.banner2Urls 
+                  : ["https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000"]
+                } 
+                title="Artesanía Santa Marta" 
               />
               <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-[#064e3b]/90 to-transparent text-white">
                 <h4 className="text-3xl font-black mb-1">Apoyemos los proyectos Samarios</h4>

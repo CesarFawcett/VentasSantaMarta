@@ -1,19 +1,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ShoppingBag, Timer, Zap, ArrowRight, Star, Percent, Flame, RefreshCw, Plus, FileText, Image as ImageIcon, X, Calendar } from 'lucide-react';
+import { ShoppingBag, Timer, Zap, ArrowRight, Star, Percent, Flame, RefreshCw, Plus, FileText, Image as ImageIcon, X, Calendar, Edit } from 'lucide-react';
 import { productService, Product, Category } from '../services/productService';
 import { authService } from '../services/authService';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import FilterPanel from '../components/FilterPanel';
+import Slideshow from '../components/Slideshow';
 
 interface PromotionalEvent {
   id: string;
   title: string;
   date: string;
   description: string;
-  imageUrl: string;
+  imageUrls: string[]; 
   isPdf?: boolean;
+}
+
+// Interface and types moved to separate file or kept here for now
+
+interface PromoConfig {
+  banner1Urls: string[];
+  banner2Urls: string[];
+  topProductIds: string[];
+  timerEnd: string; // ISO date string
 }
 
 const PromotionsPage: React.FC = () => {
@@ -32,22 +42,35 @@ const PromotionsPage: React.FC = () => {
   // Events state (Mocked, but with local administration)
   const [events, setEvents] = useState<PromotionalEvent[]>(() => {
     const saved = localStorage.getItem('promo_events');
-    return saved ? JSON.parse(saved) : [
+    const defaultEvents = [
       {
         id: '1',
         title: 'Feria del Café de la Sierra',
         date: '20-25 de Abril, 2026',
         description: 'Descuentos exclusivos en todas las variedades de café orgánico.',
-        imageUrl: '/images/banner2.png'
+        imageUrls: ['/images/banner2.png']
       },
       {
         id: '2',
         title: 'Temporada de Artesanías',
         date: 'Mayo, 2026',
         description: 'Nuevas colecciones con precios de lanzamiento especiales.',
-        imageUrl: '/images/banner1.png'
+        imageUrls: ['/images/banner1.png']
       }
     ];
+
+    if (!saved) return defaultEvents;
+
+    try {
+      const parsed = JSON.parse(saved);
+      // Migration logic: convert single imageUrl to imageUrls array
+      return parsed.map((ev: any) => ({
+        ...ev,
+        imageUrls: ev.imageUrls || (ev.imageUrl ? [ev.imageUrl] : [])
+      }));
+    } catch {
+      return defaultEvents;
+    }
   });
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -55,8 +78,48 @@ const PromotionsPage: React.FC = () => {
     title: '',
     date: '',
     description: '',
-    imageUrl: ''
+    imageUrls: []
   });
+
+  // Promo configuration state
+  const [promoConfig, setPromoConfig] = useState<PromoConfig>(() => {
+    const saved = localStorage.getItem('promoConfig');
+    const defaultEnd = new Date();
+    defaultEnd.setDate(defaultEnd.getDate() + 2);
+
+    const defaultConfig = {
+      banner1Urls: ['https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000'],
+      banner2Urls: ['https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000'],
+      topProductIds: [],
+      timerEnd: defaultEnd.toISOString()
+    };
+
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            return {
+                ...parsed,
+                banner1Urls: parsed.banner1Urls || (parsed.banner1Url ? [parsed.banner1Url] : ['https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000']),
+                banner2Urls: parsed.banner2Urls || (parsed.banner2Url ? [parsed.banner2Url] : ['https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000'])
+            };
+        } catch {
+            return defaultConfig;
+        }
+    }
+    
+    return defaultConfig;
+  });
+
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
+  const [topIdsInput, setTopIdsInput] = useState('');
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
+  
+  // Sync topIdsInput when promoConfig changes
+  useEffect(() => {
+    setTopIdsInput(promoConfig.topProductIds.join(', '));
+  }, [promoConfig.topProductIds]);
 
   // Countdown timer logic
   interface TimeLeft {
@@ -66,25 +129,33 @@ const PromotionsPage: React.FC = () => {
     seconds: number;
   }
 
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
-    days: 2,
-    hours: 14,
-    minutes: 45,
-    seconds: 30
-  });
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(promoConfig.timerEnd).getTime() - new Date().getTime();
+      
+      if (difference <= 0) {
+        setIsExpired(true);
+        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      }
+
+      setIsExpired(false);
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60)
+      };
+    };
+
+    setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => {
-      setTimeLeft((prev: TimeLeft) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
-        return prev;
-      });
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
+    
     return () => clearInterval(timer);
-  }, []);
+  }, [promoConfig.timerEnd]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -152,26 +223,56 @@ const PromotionsPage: React.FC = () => {
   };
 
   const handleAddEvent = () => {
-    if (!newEvent.title || !newEvent.imageUrl) return;
+    if (!newEvent.title || (newEvent.imageUrls && newEvent.imageUrls.length === 0)) return;
     const eventToAdd: PromotionalEvent = {
         id: Date.now().toString(),
         title: newEvent.title!,
         date: newEvent.date || 'Próximamente',
         description: newEvent.description || '',
-        imageUrl: newEvent.imageUrl!,
+        imageUrls: newEvent.imageUrls || [],
         isPdf: newEvent.isPdf
     };
     const updated = [...events, eventToAdd];
     setEvents(updated);
     localStorage.setItem('promo_events', JSON.stringify(updated));
-    setNewEvent({ title: '', date: '', description: '', imageUrl: '' });
+    setNewEvent({ title: '', date: '', description: '', imageUrls: [] });
     setIsEventModalOpen(false);
   };
 
   const handleDeleteEvent = (id: string) => {
-    const updated = events.filter(e => e.id !== id);
+    const updated = events.filter((e: PromotionalEvent) => e.id !== id);
     setEvents(updated);
     localStorage.setItem('promo_events', JSON.stringify(updated));
+  };
+
+  const handleBannerFileChange = (index: 1 | 2, file: File | undefined) => {
+    if (!file) return;
+    const bannerKey = index === 1 ? 'banner1Urls' as const : 'banner2Urls' as const;
+    if (promoConfig[bannerKey].length >= 3) {
+      alert("Solo se permiten hasta 3 imágenes por banner.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert("La imagen es demasiado grande. Máximo 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPromoConfig((prev: PromoConfig) => ({
+        ...prev,
+        [bannerKey]: [...prev[bannerKey], reader.result as string]
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    const currentIds = topIdsInput.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (currentIds.includes(productId)) {
+      setTopIdsInput(currentIds.filter((id: string) => id !== productId).join(', '));
+    } else {
+      setTopIdsInput([...currentIds, productId].join(', '));
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,10 +282,21 @@ const PromotionsPage: React.FC = () => {
         alert("El archivo es demasiado grande. Máximo 5MB.");
         return;
       }
+      
       const isPdf = file.type === 'application/pdf';
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewEvent({ ...newEvent, imageUrl: reader.result as string, isPdf });
+        const result = reader.result as string;
+        if (isPdf) {
+          setNewEvent({ ...newEvent, imageUrls: [result], isPdf: true });
+        } else {
+          const currentImages = newEvent.imageUrls || [];
+          if (currentImages.length >= 3) {
+            alert("Máximo 3 imágenes permitidas.");
+            return;
+          }
+          setNewEvent({ ...newEvent, imageUrls: [...currentImages, result], isPdf: false });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -240,8 +352,16 @@ const PromotionsPage: React.FC = () => {
           {/* Visual Mosaic for Hero */}
           <div className="hidden lg:grid grid-cols-2 gap-4 animate-reveal-right">
              <div className="space-y-4 pt-8">
-                <div className="h-48 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                    <img src="/images/banner1.png" className="w-full h-full object-cover" alt="Banner1" />
+                <div className="h-48 rounded-[2.5rem] overflow-hidden shadow-2xl relative group">
+                    <Slideshow imageUrls={promoConfig.banner1Urls} title="Sierra Nevada" />
+                    {isAdmin && (
+                      <button 
+                        onClick={() => setIsConfigModalOpen(true)}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-black uppercase text-[10px] tracking-widest border-none cursor-pointer"
+                      >
+                        <Edit size={16} /> Editar Banner 1
+                      </button>
+                    )}
                 </div>
                 <div className="h-64 rounded-[2.5rem] bg-[#10b981]/20 border border-white/10 flex flex-col items-center justify-center p-8 text-center space-y-4">
                     <Percent size={48} className="text-[#10b981]" />
@@ -249,13 +369,32 @@ const PromotionsPage: React.FC = () => {
                 </div>
              </div>
              <div className="space-y-4">
-                <div className="h-64 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                    <img src="/images/banner2.png" className="w-full h-full object-cover" alt="Banner2" />
+                <div className="h-64 rounded-[2.5rem] overflow-hidden shadow-2xl relative group">
+                    <Slideshow imageUrls={promoConfig.banner2Urls} title="Artesanías" />
+                    {isAdmin && (
+                      <button 
+                        onClick={() => setIsConfigModalOpen(true)}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-black uppercase text-[10px] tracking-widest border-none cursor-pointer"
+                      >
+                        <Edit size={16} /> Editar Banner 2
+                      </button>
+                    )}
                 </div>
-                <div className="h-48 rounded-[2.5rem] bg-white/5 border border-white/10 p-8 flex flex-col justify-end">
+                <div className="h-48 rounded-[2.5rem] bg-white/5 border border-white/10 p-8 flex flex-col justify-end relative group">
                     <Star size={24} className="text-amber-400 fill-amber-400 mb-2" />
                     <p className="font-bold text-xl">Top Selección</p>
-                    <p className="text-xs text-white/40 uppercase font-black">Abril 2026</p>
+                    <p className="text-xs text-white/40 uppercase font-black">{new Date(promoConfig.timerEnd).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
+                    {isAdmin && (
+              <button 
+                onClick={() => {
+                  setTopIdsInput(promoConfig.topProductIds.join(', '));
+                  setIsConfigModalOpen(true);
+                }}
+                className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-colors border-none cursor-pointer text-white text-[10px] font-black uppercase flex items-center gap-2"
+              >
+                <Edit size={14} /> Configurar
+              </button>
+                    )}
                 </div>
              </div>
           </div>
@@ -307,24 +446,39 @@ const PromotionsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Featured Section (First 2 Promos) */}
-            {filteredProducts.length > 0 && searchQuery === '' && selectedCategory === 'all' && (
+            {/* Featured Section (Top Selection) */}
+            {products.length > 0 && searchQuery === '' && selectedCategory === 'all' && (
               <div className="mb-24 space-y-12">
-                <div className="flex flex-col items-center text-center space-y-4">
+                <div className="flex flex-col items-center text-center space-y-4 relative group">
                   <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#10b981]">Top Selección</span>
                   <h2 className="text-4xl md:text-5xl font-black text-[#064e3b]">Selección <span className="text-[#10b981]">Premium</span></h2>
                   <div className="h-1.5 w-24 bg-gradient-to-r from-[#10b981] to-[#064e3b] rounded-full"></div>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => setIsConfigModalOpen(true)}
+                      className="absolute -top-4 right-0 p-3 bg-white shadow-xl rounded-full text-[#10b981] hover:scale-110 transition-transform border border-[#10b981]/20 cursor-pointer"
+                      title="Configurar Oferta"
+                    >
+                      <Timer size={20} />
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  {filteredProducts.slice(0, 2).map((p, idx) => (
-                    <div key={p.id} className="group relative flex flex-col md:flex-row gap-8 bg-white rounded-[3rem] p-8 border border-[#10b981]/10 hover:shadow-2xl transition-all duration-500 animate-reveal">
+                  {(promoConfig.topProductIds.length > 0 
+                    ? products.filter((p: Product) => promoConfig.topProductIds.includes(p.id))
+                    : products.slice(0, 2)
+                  ).map((p: Product, idx: number) => (
+                    <div key={p.id} className={`group relative flex flex-col md:flex-row gap-8 bg-white rounded-[3rem] p-8 border border-[#10b981]/10 hover:shadow-2xl transition-all duration-500 animate-reveal ${isExpired ? 'grayscale-[0.5]' : ''}`}>
                       <div className="w-full md:w-1/2 aspect-square rounded-[2rem] overflow-hidden shadow-lg">
                         <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                       </div>
                       <div className="w-full md:w-1/2 flex flex-col justify-center space-y-4">
-                        <div className="flex items-center gap-2">
-                           <span className="bg-[#10b981]/10 px-3 py-1 rounded-full text-[9px] font-black text-[#10b981] uppercase tracking-wider">DESTACADO</span>
+                        <div className="flex items-center justify-between">
+                           <span className="bg-[#10b981]/10 px-3 py-1 rounded-full text-[9px] font-black text-[#10b981] uppercase tracking-wider">
+                             {isExpired ? 'OFERTA TERMINADA' : 'DESTACADO'}
+                           </span>
+                           {isExpired && <span className="text-red-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-1"><X size={12}/> Bloqueado</span>}
                         </div>
                         <h3 className="text-2xl font-black text-[#064e3b] leading-tight">{p.name}</h3>
                         <p className="text-sm text-[#064e3b]/60 font-medium line-clamp-3 leading-relaxed">{p.description}</p>
@@ -332,13 +486,16 @@ const PromotionsPage: React.FC = () => {
                            <span className="text-3xl font-black text-[#10b981]">${p.price.toLocaleString()}</span>
                            <span className="bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-sm">−{p.discountPercentage}%</span>
                         </div>
-                        <button className="btn-primary w-full py-4 text-xs font-black uppercase tracking-widest mt-4">
-                           <Zap size={14} /> ¡Aprovechar ahora!
+                        <button 
+                          disabled={isExpired && !isAdmin}
+                          className={`btn-primary w-full py-4 text-xs font-black uppercase tracking-widest mt-4 flex items-center justify-center gap-2 ${isExpired && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                           <Zap size={14} /> {isExpired && !isAdmin ? 'Oferta Expirada' : '¡Aprovechar ahora!'}
                         </button>
                       </div>
                       
                       <div className="absolute -top-4 -right-4 h-16 w-16 bg-[#064e3b] text-white rounded-full flex flex-col items-center justify-center shadow-xl rotate-12 group-hover:rotate-0 transition-transform">
-                         <span className="text-[10px] font-bold uppercase leading-none">HOT</span>
+                         <span className="text-[10px] font-bold uppercase leading-none">{isExpired ? 'FIN' : 'HOT'}</span>
                          <span className="text-lg font-black leading-none">{idx + 1}</span>
                       </div>
                     </div>
@@ -348,8 +505,8 @@ const PromotionsPage: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.slice(searchQuery === '' && selectedCategory === 'all' ? 2 : 0).map((p, index) => (
-                <ProductCard key={p.id} product={p} index={index} />
+              {filteredProducts.slice(searchQuery === '' && selectedCategory === 'all' ? (promoConfig.topProductIds.length || 2) : 0).map((p: Product, index: number) => (
+                <ProductCard key={p.id} product={p} index={index} isExpired={isExpired} />
               ))}
             </div>
 
@@ -380,7 +537,7 @@ const PromotionsPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {events.map(event => (
+             {events.map((event: PromotionalEvent) => (
                 <div key={event.id} className="group flex flex-col bg-[#f0fdf4]/50 rounded-[2.5rem] border border-[#10b981]/10 overflow-hidden hover:shadow-2xl transition-all duration-500">
                    <div className="aspect-[16/9] relative overflow-hidden">
                       {event.isPdf ? (
@@ -392,7 +549,7 @@ const PromotionsPage: React.FC = () => {
                            </div>
                         </div>
                       ) : (
-                        <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <Slideshow imageUrls={event.imageUrls} title={event.title} />
                       )}
                       
                       {isAdmin && (
@@ -424,8 +581,8 @@ const PromotionsPage: React.FC = () => {
 
       {/* Add Event Modal */}
       {isEventModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-[#064e3b]/80 backdrop-blur-sm animate-reveal">
-           <div className="bg-white rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-6 bg-[#064e3b]/80 backdrop-blur-sm animate-reveal">
+           <div className="bg-white rounded-[2rem] md:rounded-[3rem] w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto border border-[#064e3b]/5">
               <div className="bg-[#10b981] p-8 text-white flex justify-between items-center">
                  <div>
                     <h2 className="text-2xl font-black">Nuevo Evento</h2>
@@ -441,7 +598,7 @@ const PromotionsPage: React.FC = () => {
                     <input 
                       type="text" 
                       value={newEvent.title}
-                      onChange={e => setNewEvent({...newEvent, title: e.target.value})}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEvent({...newEvent, title: e.target.value})}
                       className="w-full h-14 rounded-2xl bg-[#f0fdf4] border border-[#064e3b]/5 px-6 outline-none focus:border-[#10b981] text-[#064e3b] font-bold transition-all"
                       placeholder="Ej: Gran feria de Mayo"
                     />
@@ -452,7 +609,7 @@ const PromotionsPage: React.FC = () => {
                         <input 
                             type="text" 
                             value={newEvent.date}
-                            onChange={e => setNewEvent({...newEvent, date: e.target.value})}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEvent({...newEvent, date: e.target.value})}
                             className="w-full h-14 rounded-2xl bg-[#f0fdf4] border border-[#064e3b]/5 px-6 outline-none focus:border-[#10b981] text-[#064e3b] font-bold transition-all"
                             placeholder="Ej: 20 de Mayo"
                         />
@@ -469,46 +626,276 @@ const PromotionsPage: React.FC = () => {
                     <label className="block text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40 mb-2 ml-4">Descripción Corta</label>
                     <textarea 
                       value={newEvent.description}
-                      onChange={e => setNewEvent({...newEvent, description: e.target.value})}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewEvent({...newEvent, description: e.target.value})}
                       className="w-full h-24 rounded-2xl bg-[#f0fdf4] border border-[#064e3b]/5 p-6 outline-none focus:border-[#10b981] text-[#064e3b] font-bold transition-all resize-none"
                       placeholder="Breve detalle de la promoción..."
                     ></textarea>
                  </div>
-                 
-                 <div className="relative">
-                    <input 
-                      type="file" 
-                      id="event-file" 
-                      className="hidden" 
-                      accept="image/*,application/pdf"
-                      onChange={handleImageUpload}
-                    />
-                    <label 
-                      htmlFor="event-file"
-                      className="flex flex-col items-center justify-center w-full h-32 rounded-[2rem] border-2 border-dashed border-[#10b981]/20 bg-[#f0fdf4] hover:bg-[#10b981]/5 cursor-pointer transition-all gap-2"
-                    >
-                      {newEvent.imageUrl ? (
-                        <div className="flex items-center gap-3 text-[#10b981] font-black text-xs uppercase">
-                            <span className="p-2 bg-white rounded-xl shadow-sm"><ImageIcon size={20} /></span> Archivo Cargado
-                        </div>
-                      ) : (
-                        <>
-                          <Plus size={24} className="text-[#10b981]" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40">Subir Imagen o PDF (Max 5MB)</span>
-                        </>
-                      )}
-                    </label>
+
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center px-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40">Multimedia (Max 3 imágenes o 1 PDF)</label>
+                      <span className="text-[10px] font-black text-[#10b981]">
+                        {newEvent.isPdf ? '1/1 PDF' : `${newEvent.imageUrls?.length || 0}/3 Imágenes`}
+                      </span>
+                    </div>
+                    
+                    {/* Previews */}
+                    {newEvent.imageUrls && newEvent.imageUrls.length > 0 && (
+                      <div className="flex gap-2 px-2 overflow-x-auto pb-2">
+                        {newEvent.imageUrls.map((url: string, idx: number) => (
+                          <div key={idx} className="relative group/thumb shrink-0">
+                            <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-[#10b981]/20">
+                              {newEvent.isPdf ? (
+                                <div className="w-full h-full bg-[#064e3b] flex items-center justify-center">
+                                  <FileText className="text-[#10b981]" size={24} />
+                                </div>
+                              ) : (
+                                <img src={url} className="w-full h-full object-cover" alt="" />
+                              )}
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const updated = newEvent.imageUrls?.filter((_: string, i: number) => i !== idx);
+                                setNewEvent({ ...newEvent, imageUrls: updated });
+                              }}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {!newEvent.isPdf && newEvent.imageUrls.length < 3 && (
+                          <label htmlFor="event-file" className="h-20 w-20 rounded-2xl border-2 border-dashed border-[#10b981]/20 flex items-center justify-center text-[#10b981] hover:bg-[#10b981]/5 cursor-pointer transition-all shrink-0">
+                             <Plus size={20} />
+                          </label>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                       <input 
+                         type="file" 
+                         id="event-file" 
+                         className="hidden" 
+                         accept="image/*,application/pdf"
+                         onChange={handleImageUpload}
+                       />
+                       {( !newEvent.imageUrls || newEvent.imageUrls.length === 0 ) && (
+                         <label 
+                           htmlFor="event-file"
+                           className="flex flex-col items-center justify-center w-full h-32 rounded-[2rem] border-2 border-dashed border-[#10b981]/20 bg-[#f0fdf4] hover:bg-[#10b981]/5 cursor-pointer transition-all gap-2"
+                         >
+                            <Plus size={24} className="text-[#10b981]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40">Subir Imagen o PDF (Max 5MB)</span>
+                         </label>
+                       )}
+                    </div>
                  </div>
 
                  <button 
                    onClick={handleAddEvent}
-                   disabled={!newEvent.title || !newEvent.imageUrl}
+                   disabled={!newEvent.title || (newEvent.imageUrls && newEvent.imageUrls.length === 0)}
                    className="btn-primary w-full py-5 rounded-full text-sm font-black uppercase tracking-widest shadow-xl shadow-[#10b981]/20 disabled:opacity-50 disabled:grayscale"
                  >
                     Publicar Promo / Evento
                  </button>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* Admin Config Modal */}
+      {isConfigModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 md:p-6 bg-[#064e3b]/90 backdrop-blur-md animate-reveal">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto border border-[#064e3b]/10">
+            <div className="bg-[#064e3b] p-8 text-white flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                  <Timer className="text-[#10b981]" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black">Configurar Oferta</h2>
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Dinamización de Promociones</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsConfigModalOpen(false)} 
+                className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors border-none cursor-pointer"
+              >
+                <X size={20} className="text-white" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              {/* Banners */}
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40 ml-4">Banner Principal (Hero - Sierra Nevada)</label>
+                  <div className="flex flex-wrap gap-2 px-4">
+                    {promoConfig.banner1Urls.map((url, idx) => (
+                      <div key={idx} className="relative h-14 w-14 rounded-2xl overflow-hidden group">
+                        <img src={url} className="w-full h-full object-cover" alt={`B1-${idx}`} />
+                        <button 
+                          onClick={() => setPromoConfig({...promoConfig, banner1Urls: promoConfig.banner1Urls.filter((_, i) => i !== idx)})}
+                          className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white border-none cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {promoConfig.banner1Urls.length < 3 && (
+                      <label className="h-14 w-14 flex items-center justify-center bg-[#10b981] text-white rounded-2xl cursor-pointer hover:bg-[#059669] transition-colors shrink-0">
+                        <Plus size={24} />
+                        <input type="file" accept="image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBannerFileChange(1, e.target.files?.[0])} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40 ml-4">Banner Secundario (Historia - Artesanías)</label>
+                  <div className="flex flex-wrap gap-2 px-4">
+                    {promoConfig.banner2Urls.map((url, idx) => (
+                      <div key={idx} className="relative h-14 w-14 rounded-2xl overflow-hidden group">
+                        <img src={url} className="w-full h-full object-cover" alt={`B2-${idx}`} />
+                        <button 
+                          onClick={() => setPromoConfig({...promoConfig, banner2Urls: promoConfig.banner2Urls.filter((_, i) => i !== idx)})}
+                          className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white border-none cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {promoConfig.banner2Urls.length < 3 && (
+                      <label className="h-14 w-14 flex items-center justify-center bg-[#10b981] text-white rounded-2xl cursor-pointer hover:bg-[#059669] transition-colors shrink-0">
+                        <Plus size={24} />
+                        <input type="file" accept="image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBannerFileChange(2, e.target.files?.[0])} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Timer */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40 ml-4">Finalización de la Oferta</label>
+                <div className="flex items-center h-14 bg-[#f0fdf4] rounded-2xl px-6 border border-[#064e3b]/5 focus-within:border-[#10b981] transition-colors gap-3">
+                  <Calendar size={18} className="text-[#064e3b]/40 shrink-0" />
+                  <input 
+                    type="datetime-local"
+                    value={promoConfig.timerEnd.slice(0, 16)} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPromoConfig({...promoConfig, timerEnd: new Date(e.target.value).toISOString()})}
+                    className="bg-transparent border-none outline-none text-sm font-bold text-[#064e3b] w-full cursor-pointer"
+                  />
+                </div>
+                <p className="text-[10px] text-[#064e3b]/40 font-bold px-4">
+                  Al llegar esta fecha, se bloquearán las compras del Top Selección y banners.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#064e3b]/40 ml-4">IDs Productos Top (Separa por coma)</label>
+                <div className="flex gap-2 px-4">
+                  <div className="flex-1 flex items-center h-14 bg-[#f0fdf4] rounded-2xl px-6 border border-[#064e3b]/5 focus-within:border-[#10b981] transition-colors gap-3">
+                    <Star size={18} className="text-[#064e3b]/40 shrink-0" />
+                    <input 
+                      type="text"
+                      placeholder="ID1, ID2..."
+                      value={topIdsInput}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopIdsInput(e.target.value.replace(/[^0-9, ]/g, ''))}
+                      className="bg-transparent border-none outline-none text-sm font-bold text-[#064e3b] w-full"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setShowPicker(!showPicker)}
+                    className="h-14 px-6 bg-[#064e3b] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#064e3b]/90 transition-all border-none cursor-pointer shrink-0"
+                  >
+                    {showPicker ? 'Ocultar' : 'Seleccionar'}
+                  </button>
+                </div>
+
+                {showPicker && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mx-4">
+                      <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+                        Selecciona los productos de la lista a continuación para agregarlos automáticamente.
+                      </p>
+                    </div>
+
+                    <div className="px-4 space-y-3">
+                      <div className="flex items-center h-12 bg-[#f0fdf4] rounded-xl px-4 border border-[#064e3b]/5 focus-within:border-[#10b981] transition-colors gap-2">
+                        <RefreshCw size={16} className="text-[#064e3b]/40" />
+                        <input 
+                          type="text"
+                          placeholder="Buscar producto..."
+                          value={pickerSearch}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPickerSearch(e.target.value)}
+                          className="bg-transparent border-none outline-none text-xs font-bold text-[#064e3b] w-full"
+                        />
+                      </div>
+                  <div className="max-h-60 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                    {products
+                      .filter((p: Product) => !pickerSearch || p.name.toLowerCase().includes(pickerSearch.toLowerCase()))
+                      .map((p: Product) => {
+                        const isSelected = topIdsInput.split(',').map((s: string) => s.trim()).includes(p.id);
+                        return (
+                          <div 
+                            key={p.id}
+                            onClick={() => toggleProductSelection(p.id)}
+                            className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'bg-[#10b981]/10 border-[#10b981] shadow-sm' 
+                                : 'bg-[#f0fdf4] border-transparent hover:border-[#064e3b]/10'
+                            }`}
+                          >
+                            <img src={p.imageUrl} className="h-10 w-10 rounded-lg object-cover" alt="" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black text-[#064e3b] truncate">{p.name}</p>
+                              <p className="text-[9px] font-bold text-[#064e3b]/40">ID: {p.id}</p>
+                            </div>
+                            {isSelected ? (
+                              <div className="h-6 w-6 bg-[#10b981] text-white rounded-full flex items-center justify-center">
+                                <Plus size={14} className="rotate-45" />
+                              </div>
+                            ) : (
+                              <div className="h-6 w-6 bg-[#064e3b]/5 text-[#064e3b]/20 rounded-full flex items-center justify-center">
+                                <Plus size={14} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={() => setIsConfigModalOpen(false)}
+                  className="flex-1 h-14 rounded-full border-2 border-[#064e3b]/10 text-[#064e3b] font-black uppercase text-xs tracking-widest hover:bg-[#064e3b]/5 transition-all bg-transparent cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    const finalConfig = {
+                      ...promoConfig,
+                      topProductIds: topIdsInput.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    };
+                    setPromoConfig(finalConfig);
+                    localStorage.setItem('promoConfig', JSON.stringify(finalConfig));
+                    setIsConfigModalOpen(false);
+                  }}
+                  className="flex-[2] btn-primary h-14 text-xs font-black uppercase tracking-widest shadow-xl shadow-[#10b981]/20"
+                >
+                  Guardar Configuración
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

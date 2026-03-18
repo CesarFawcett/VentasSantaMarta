@@ -7,15 +7,18 @@ import EditProductModal from './EditProductModal';
 interface ProductCardProps {
   product: Product;
   index: number;
+  isExpired?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index, isExpired }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const isAdmin = authService.isAdmin();
   
   const oldPrice = product.discountPercentage > 0
     ? Math.round(product.price / (1 - product.discountPercentage / 100))
     : null;
+
+  const isDisabled = isExpired && !isAdmin;
 
   const handleDelete = async () => {
     if (window.confirm(`¿Estás seguro de eliminar "${product.name}"?`)) {
@@ -86,8 +89,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
               </button>
             </>
           ) : (
-            <button className="btn-primary w-full py-3 text-xs tracking-widest uppercase">
-              <ShoppingBag size={14} /> Añadir al Carrito
+            <button 
+              disabled={isDisabled}
+              className={`btn-primary w-full py-3 text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${isDisabled ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+            >
+              <ShoppingBag size={14} /> {isDisabled ? 'Oferta Expirada' : 'Añadir al Carrito'}
             </button>
           )}
         </div>
@@ -111,7 +117,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-[#064e3b]/5">
-          <button className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#064e3b]/40 hover:text-[#064e3b] transition-colors border-none bg-transparent cursor-pointer">
+          <button 
+            disabled={isDisabled}
+            className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#064e3b]/40 hover:text-[#064e3b] transition-colors border-none bg-transparent ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          >
             Ver más <ArrowUpRight size={13} />
           </button>
           <div className="flex items-center gap-1 text-[9px] font-bold text-[#064e3b]/30 uppercase bg-[#064e3b]/5 px-2 py-1 rounded">

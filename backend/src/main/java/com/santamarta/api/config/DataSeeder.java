@@ -26,7 +26,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (userRepository.count() == 0) {
+        if (!userRepository.existsByEmail("admin@santamarta.com")) {
             log.info("Creando usuario administrador inicial...");
             User admin = new User();
             admin.setEmail("admin@santamarta.com");
@@ -34,6 +34,13 @@ public class DataSeeder implements CommandLineRunner {
             admin.setFullName("Administrador Principal");
             admin.setRole(User.Role.ADMIN);
             userRepository.save(admin);
+            log.info("✅ Usuario administrador creado con éxito.");
+        } else {
+            log.info("El usuario administrador ya existe. Asegurándose de que la contraseña sea correcta...");
+            User admin = userRepository.findByEmail("admin@santamarta.com").orElseThrow();
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            userRepository.save(admin);
+            log.info("✅ Contraseña del administrador actualizada.");
         }
 
         if (productRepository.count() > 0) {

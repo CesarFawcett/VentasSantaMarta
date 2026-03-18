@@ -50,7 +50,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
             type="text"
             placeholder="Buscar por nombre, categoría..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             className="bg-transparent border-none outline-none text-sm font-medium text-[#064e3b] placeholder-[#064e3b]/30 w-full"
           />
           {searchQuery && (
@@ -78,7 +78,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="relative">
           <select
             value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value)}
             className="appearance-none h-12 pl-4 pr-10 rounded-full bg-white border border-[#064e3b]/10 text-[#064e3b] font-bold text-sm outline-none cursor-pointer hover:border-[#064e3b] transition-colors"
           >
             {sortOptions.map(opt => (
