@@ -17,6 +17,7 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
   background-color: var(--background);
   color: var(--primary);
+  overflow-x: hidden;
 }
 
 @layer components {
@@ -64,4 +65,25 @@ body {
 
 .blob {
   @apply absolute w-[500px] h-[500px] bg-accent/20 rounded-full blur-[100px] -z-10;
+}
+.animate-slide-left {
+  animation: slideLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounce-mini {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-mini {
+  animation: bounce-mini 0.3s ease infinite;
 }

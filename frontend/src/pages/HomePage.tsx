@@ -38,7 +38,7 @@ const HomePage: React.FC = () => {
     }
   }, []);
   return (
-    <div className="min-h-screen bg-[#f0fdf4] overflow-x-hidden">
+    <div className="min-h-screen bg-[#f0fdf4]">
       {/* Decorative blobs */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-[#10b981]/10 rounded-full blur-[120px] -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-[#064e3b]/5 rounded-full blur-[100px] -z-10 -translate-x-1/4 translate-y-1/4 pointer-events-none"></div>
@@ -73,15 +73,15 @@ const HomePage: React.FC = () => {
         <section className="max-w-7xl mx-auto px-6 md:px-12 py-24 grid lg:grid-cols-2 gap-20 items-center">
           <div className="relative animate-reveal">
             <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl group">
-              <Slideshow 
-                imageUrls={promoConfig.banner2Urls.length > 0 
-                  ? promoConfig.banner2Urls 
+              <Slideshow
+                imageUrls={promoConfig.banner2Urls.length > 0
+                  ? promoConfig.banner2Urls
                   : ["https://images.unsplash.com/photo-1596464871957-6953930419f0?auto=format&fit=crop&q=80&w=1000"]
-                } 
-                title="Artesanía Santa Marta" 
+                }
+                title="Artesanía Santa Marta"
               />
               <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-[#064e3b]/90 to-transparent text-white">
-                <h4 className="text-3xl font-black mb-1">Apoyemos los proyectos Samarios</h4>
+                <h4 className="text-3xl font-black mb-1">Productos pensados en tí</h4>
                 <p className="text-sm opacity-70">apoyamos tu comodidad</p>
               </div>
             </div>

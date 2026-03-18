@@ -94,7 +94,7 @@ const CatalogPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0fdf4] overflow-x-hidden">
+    <div className="min-h-screen bg-[#f0fdf4]">
       <Navbar />
 
       <CatalogHeader productCount={products.length} />

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Product, productService } from '../services/productService';
 import { authService } from '../services/authService';
-import { Trash2, Edit, Heart, ShoppingBag, ArrowUpRight, ShieldCheck, Zap } from 'lucide-react';
+import { Trash2, Edit, Heart, ShoppingBag, ArrowUpRight, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
+import { cartService } from '../services/cartService';
 import EditProductModal from './EditProductModal';
 
 interface ProductCardProps {
@@ -12,6 +13,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, index, isExpired }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isAdmin = authService.isAdmin();
   
   const oldPrice = product.discountPercentage > 0
@@ -28,6 +30,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index, isExpired }) 
       } catch (err) {
         alert("Error al eliminar el producto.");
       }
+    }
+  };
+
+  const handleAddToCart = () => {
+    try {
+      cartService.addToCart(product);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -90,10 +102,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index, isExpired }) 
             </>
           ) : (
             <button 
-              disabled={isDisabled}
-              className={`btn-primary w-full py-3 text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${isDisabled ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+              disabled={isDisabled || product.stock <= 0}
+              onClick={handleAddToCart}
+              className={`btn-primary w-full py-3 text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${isDisabled || product.stock <= 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
             >
-              <ShoppingBag size={14} /> {isDisabled ? 'Oferta Expirada' : 'Añadir al Carrito'}
+              <ShoppingBag size={14} /> {isDisabled ? 'Oferta Expirada' : product.stock <= 0 ? 'Agotado' : 'Añadir al Carrito'}
             </button>
           )}
         </div>
@@ -115,6 +128,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index, isExpired }) 
             <span className="text-xs font-bold text-[#064e3b]/30 line-through">${oldPrice.toLocaleString('es-CO')}</span>
           )}
         </div>
+
+        {error && (
+          <div className="flex items-center gap-1.5 text-red-500 text-[10px] font-bold animate-reveal">
+            <AlertCircle size={12} /> {error}
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-2 border-t border-[#064e3b]/5">
           <button 

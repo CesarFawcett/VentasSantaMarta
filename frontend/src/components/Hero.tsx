@@ -79,16 +79,16 @@ const Hero: React.FC = () => {
 
         <div className="relative fade-in hidden lg:block">
           <div className="relative rounded-[3rem] overflow-hidden shadow-2xl rotate-2 aspect-[4/5] max-w-lg mx-auto border-8 border-white group">
-            <Slideshow 
-              imageUrls={promoConfig.banner1Urls.length > 0 
-                ? promoConfig.banner1Urls 
+            <Slideshow
+              imageUrls={promoConfig.banner1Urls.length > 0
+                ? promoConfig.banner1Urls
                 : ["https://images.unsplash.com/photo-1590402444582-43d16d655f9a?auto=format&fit=crop&q=80&w=1000"]
-              } 
-              title="Sierra Nevada" 
+              }
+              title="Sierra Nevada"
             />
             <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-[#064e3b]/90 to-transparent text-white">
               <span className="bg-[#10b981] px-3 py-1 rounded text-[10px] font-black uppercase mb-3 inline-block">Destacado</span>
-              <h3 className="text-3xl font-black mb-2 leading-tight">Sierra Nevada - Lugares que enamoran</h3>
+              <h3 className="text-3xl font-black mb-2 leading-tight">En Santa Marta - Productos que enamoran</h3>
               <button className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#10b981] hover:text-white transition-colors border-none bg-transparent cursor-pointer">
                 Ver Más <ArrowRight size={16} />
               </button>

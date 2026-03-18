@@ -2,17 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Search, User, MapPin, Menu, X, LogOut, ShieldCheck } from 'lucide-react';
 import { authService, AuthResponse } from '../services/authService';
+import { cartService } from '../services/cartService';
 import LoginModal from './LoginModal';
+import CartModal from './CartModal';
+import ProfileModal from './ProfileModal';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [user, setUser] = useState<AuthResponse | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [isCartPulsing, setIsCartPulsing] = useState(false);
 
   useEffect(() => {
     setUser(authService.getCurrentUser());
-  }, []);
+    
+    // Subscribe to cart changes
+    const unsubscribe = cartService.subscribe((cart) => {
+      const newCount = cart.reduce((total, item) => total + item.quantity, 0);
+      if (newCount > cartCount) {
+        setIsCartPulsing(true);
+        setTimeout(() => setIsCartPulsing(false), 1000);
+      }
+      setCartCount(newCount);
+    });
+
+    return () => unsubscribe();
+  }, [cartCount]);
 
   const navLinks = [
     { label: 'Inicio', path: '/' },
@@ -29,7 +48,8 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="glass-nav sticky top-0 z-50 py-4">
+    <>
+      <header className="glass-nav sticky top-0 z-50 py-4">
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group">
@@ -75,21 +95,28 @@ const Navbar: React.FC = () => {
             />
           </div>
 
-          <button className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#064e3b]/5 text-[#064e3b] relative transition-colors border-none cursor-pointer bg-transparent">
-            <ShoppingBag size={21} />
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981] text-[9px] font-black text-white ring-2 ring-white">
-              0
+          <button 
+            onClick={() => setIsCartOpen(true)}
+            className={`h-10 w-10 flex items-center justify-center rounded-full hover:bg-[#064e3b]/5 text-[#064e3b] relative transition-all border-none cursor-pointer bg-transparent ${isCartPulsing ? 'scale-125 text-[#10b981]' : ''}`}
+          >
+            <ShoppingBag size={21} className={isCartPulsing ? 'animate-bounce' : ''} />
+            <span className={`absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981] text-[9px] font-black text-white ring-2 ring-white transition-transform ${isCartPulsing ? 'scale-125' : ''}`}>
+              {cartCount}
             </span>
           </button>
 
           {user ? (
             <div className="flex items-center gap-3 ml-2 pl-2 border-l border-[#064e3b]/10">
-              <div className="flex flex-col items-end hidden sm:flex">
-                <span className="text-[10px] font-black text-[#064e3b] leading-none flex items-center gap-1">
+              <button 
+                onClick={() => setIsProfileOpen(true)}
+                className="flex flex-col items-end hidden sm:flex border-none bg-transparent cursor-pointer group hover:opacity-80 transition-all"
+                title="Editar Perfil"
+              >
+                <span className="text-[10px] font-black text-[#064e3b] leading-none flex items-center gap-1 group-hover:text-[#10b981]">
                   {user.fullName} {user.role === 'ADMIN' && <ShieldCheck size={12} className="text-[#10b981]" />}
                 </span>
-                <span className="text-[8px] font-bold text-[#064e3b]/40 uppercase tracking-widest">{user.role}</span>
-              </div>
+                <span className="text-[8px] font-bold text-[#064e3b]/40 uppercase tracking-widest group-hover:text-[#10b981]/60">{user.role}</span>
+              </button>
               <button 
                 onClick={handleLogout}
                 className="h-10 w-10 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all border-none cursor-pointer"
@@ -136,14 +163,23 @@ const Navbar: React.FC = () => {
         </div>
       )}
 
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-        onLoginSuccess={() => setUser(authService.getCurrentUser())}
-      />
     </header>
-  );
+    <LoginModal 
+      isOpen={isLoginOpen} 
+      onClose={() => setIsLoginOpen(false)} 
+      onLoginSuccess={() => setUser(authService.getCurrentUser())}
+    />
+    <CartModal 
+      isOpen={isCartOpen} 
+      onClose={() => setIsCartOpen(false)} 
+    />
+    <ProfileModal 
+      isOpen={isProfileOpen} 
+      onClose={() => setIsProfileOpen(false)} 
+      onUpdateSuccess={(updatedUser) => setUser(updatedUser)}
+    />
+  </>
+);
 };
 
 export default Navbar;
