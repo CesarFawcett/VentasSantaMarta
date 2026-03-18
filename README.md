@@ -90,4 +90,4 @@ VentasSantaMarta/
 Para conocer los detalles profundos de la refactorización, actualizaciones de dependencias y cambios en la API de seguridad, consulta el archivo [AUDIT.md](./AUDIT.md).
 
 ---
-Desarrollado con ❤️ por el equipo de **Agente Actualizador**.
+
